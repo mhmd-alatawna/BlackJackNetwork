@@ -4,8 +4,12 @@ import time
 from Dealer import Dealer
 from Messages import *
 
-max_player_count = 2
+max_player_count = 3
 time_out_period = 10
+total_wins = 0
+total_loses = 0
+total_ties = 0
+
 class Table :
     def __init__(self):
         self.dealer = Dealer()
@@ -16,6 +20,9 @@ class Table :
         self.dealer_sum = 0
 
     def play(self , server):
+        global total_wins
+        global total_loses
+        global total_ties
         try:
             try :
                 for i in range(max_player_count) :
@@ -30,7 +37,7 @@ class Table :
             players_to_remove = []
             for connection,address in self.players :
                 try:
-                    message = recv_exact_tcp(connection, RequestMessage.get_size(), RequestMessage.extractMessage)
+                    message = recv_exact_tcp(connection, RequestMessage.get_size(), RequestMessage.extractMessage , 30)
                     client_name = message.client_name
                     players_messages[(connection,address)] = message,client_name
                     self.players_sums[(connection,address)] = 0
@@ -47,7 +54,6 @@ class Table :
 
             if len(self.players) == 0 :
                 return False
-
 
             num_of_rounds = 3
             for num in range(num_of_rounds):
@@ -83,6 +89,7 @@ class Table :
                     round_status = 0
                     if self.players_sums[player] > 21:
                         round_status = 2
+                        total_wins += 1
                         game_over = True
                     # sending the first two player's cards and the first dealer's card
                     message1 = ServerPayloadMessage(0, client_card1)
@@ -97,7 +104,7 @@ class Table :
                     while not game_over:
                         try:
                             message = recv_exact_tcp(connection, ClientPayloadMessage.get_size(),
-                                                     ClientPayloadMessage.extractMessage)
+                                                     ClientPayloadMessage.extractMessage , 30)
                         except:
                             connection.close()
                             print(f"[{client_name}] client {address} left before game end")
@@ -105,7 +112,7 @@ class Table :
                             flag = True
                             break
                         if flag :
-                            continue
+                            break
                         response = message.player_decision
                         print(f"[{client_name}] player's turn : {response}")
                         if response == "Stand":
@@ -116,6 +123,7 @@ class Table :
                         self.players_sums[player] += self.dealer.get_points(new_card)
                         if self.players_sums[player] > 21:
                             # send message informing
+                            total_wins += 1
                             lose_message = ServerPayloadMessage(2, new_card)
                             connection.sendall(lose_message.get_message())
                             game_over = True
@@ -123,6 +131,9 @@ class Table :
                         else:
                             not_over_message = ServerPayloadMessage(0, new_card)
                             connection.sendall(not_over_message.get_message())
+
+                    if flag :
+                        continue
                     # if player busted , continue to next round
                     if game_over:
                         print(f"[{client_name}] player busted")
@@ -138,6 +149,7 @@ class Table :
                 self.dealer_sum += self.dealer.get_points(dealer_card2)
                 round_status = 0
                 if self.dealer_sum > 21:
+                    total_loses += len(players_who_didnt_bust)
                     round_status = 3
                     print(f"dealer busted")
                 if self.dealer_sum >= 17:
@@ -147,12 +159,15 @@ class Table :
                         if self.dealer_sum < self.players_sums[player]:
                             print(f"[{client_name}] dealer lost due to lower sum")
                             round_status = 3
+                            total_loses += 1
                         elif self.dealer_sum > self.players_sums[player]:
                             print(f"[{client_name}] dealer won due to higher sum")
                             round_status = 2
+                            total_wins += 1
                         else:
                             print(f"[{client_name}] dealer tied")
                             round_status = 1
+                            total_ties += 1
                 for player in players_who_didnt_bust :
                     _, client_name = players_messages[player]
                     connection, address = player
@@ -170,6 +185,7 @@ class Table :
                     # dealer busted
                     if self.dealer_sum > 21:
                         print(f"dealer busted")
+                        total_loses += len(players_who_didnt_bust)
                         # send message informing
                         for player in players_who_didnt_bust :
                             _, client_name = players_messages[player]
@@ -196,12 +212,15 @@ class Table :
                             if self.dealer_sum < self.players_sums[player]:
                                 print(f"[{client_name}] dealer lost due to lower sum")
                                 round_status = 3
+                                total_loses += 1
                             elif self.players_sums[player] < self.dealer_sum:
                                 print(f"[{client_name}] dealer won due to higher sum")
                                 round_status = 2
+                                total_wins += 1
                             else:
                                 print(f"[{client_name}] dealer tied")
                                 round_status = 1
+                                total_ties += 1
 
                             message = ServerPayloadMessage(round_status, last_card)
                             connection.sendall(message.get_message())
@@ -263,5 +282,6 @@ broadcast_thread.start()
 while True :
     table = Table()
     table.play(server)
+    print(f"wins : {total_wins} , loses : {total_loses} , ties : {total_ties}")
 
 

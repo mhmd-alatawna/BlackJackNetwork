@@ -202,7 +202,7 @@ class ServerPayloadMessage:
 
 # waits till the full size is received , uses a timer in case the correct message is not received
 # in a given time
-def recv_exact_tcp(sock, n, extraction_method, timeout = 30):
+def recv_exact_tcp(sock, n, extraction_method, timeout = 60):
     data = bytearray()
     try:
         sock.settimeout(timeout)

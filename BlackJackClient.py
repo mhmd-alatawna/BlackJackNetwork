@@ -7,7 +7,6 @@ from Messages import OfferMessage, RequestMessage, ServerPayloadMessage, ClientP
 
 PORT = 13122
 
-
 def listen_for_offers(offers_max_count):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     # allow reusing the same port (in case multiple clients run from the same machine)
@@ -47,6 +46,7 @@ def request_server(server_ip,server_port,num_of_rounds,client_name) :
     win_count = 0
     tie_count = 0
     lose_count = 0
+    cards_counter = {}
     for i in range(num_of_rounds):
         print("----------------------------")
         print(f"round {i+1} is starting")
@@ -65,6 +65,11 @@ def request_server(server_ip,server_port,num_of_rounds,client_name) :
         player_card1 = message1.card
         player_card2 = message2.card
         dealer_card1 = message3.card
+
+        cards_counter[player_card1.num] = cards_counter.get(player_card1.num , 0) + 1
+        cards_counter[player_card2.num] = cards_counter.get(player_card1.num , 0) + 1
+        cards_counter[dealer_card1.num] = cards_counter.get(player_card1.num , 0) + 1
+
 
         print(f"your cards : {player_card1} , {player_card2}")
         print(f"dealer's cards : {dealer_card1}")
@@ -106,6 +111,7 @@ def request_server(server_ip,server_port,num_of_rounds,client_name) :
                     client.close()
                     return False
                 print(f"your card : {message.card}")
+                cards_counter[message.card.num] = cards_counter.get(player_card1.num , 0) + 1
 
             if message.round_status == 0 :
                 continue
@@ -124,6 +130,8 @@ def request_server(server_ip,server_port,num_of_rounds,client_name) :
             else :
                 pass
     print(f"win/tie/lose : {win_count}/{tie_count}/{lose_count}")
+    for num,count in cards_counter.items():
+        print(f"number : {num} , appears : {count}")
     client.close()
     return True
 
