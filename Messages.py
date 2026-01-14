@@ -75,13 +75,13 @@ class RequestMessage:
         self.cookie_id = cookie_id
         self.msg_type = msg_type
         self.num_of_rounds = num_of_rounds
-        self.server_name = client_name
+        self.client_name = client_name
 
     def get_message(self):
         cookie_id_bytes = self.cookie_id.to_bytes(4, byteorder='big')
         msg_type_bytes = self.msg_type.to_bytes(1, byteorder="big")
         num_of_rounds_bytes = self.num_of_rounds.to_bytes(1, byteorder="big")
-        client_name_bytes = encode_string(self.server_name,32)
+        client_name_bytes = encode_string(self.client_name,32)
 
         return cookie_id_bytes + msg_type_bytes + num_of_rounds_bytes + client_name_bytes
 
@@ -202,7 +202,7 @@ class ServerPayloadMessage:
 
 # waits till the full size is received , uses a timer in case the correct message is not received
 # in a given time
-def recv_exact(sock, n , extraction_method , timeout = 5):
+def recv_exact_tcp(sock, n, extraction_method, timeout = 30):
     data = bytearray()
     try:
         sock.settimeout(timeout)
@@ -220,7 +220,7 @@ def recv_exact(sock, n , extraction_method , timeout = 5):
             try :
                 message = extraction_method(bytes(data))
                 return message
-            except MessageSizeException,CorruptedMessageException:
+            except (MessageSizeException,CorruptedMessageException):
                 # in case message was corrupted , retry and wait for correct one
                 data = bytearray()
                 continue
