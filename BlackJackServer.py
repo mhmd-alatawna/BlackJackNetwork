@@ -9,7 +9,7 @@ from Messages import OfferMessage, RequestMessage, ServerPayloadMessage, ClientP
 BROADCAST_IP = "255.255.255.255"
 PORT = 13122
 MESSAGE_INTERVAL_SEC = 1
-server_name = "greedy dealer"
+server_name = "greedy dealer 67"
 
 # as we learned in class , each physical connection have its own IP , we need to get the active IP
 # so we send a summy message to check which interface (wifi,bluetooth ...) the OS uses .

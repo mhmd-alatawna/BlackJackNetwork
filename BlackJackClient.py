@@ -28,7 +28,7 @@ def listen_for_offers(offers_max_count):
             rejected_count -= 1
             continue
 
-        print(f"Received offer from {address[0]}")
+        print(f"Received offer from {address[0]} | {message.server_name}")
         offers_dict[str(address[0])] = (message,address[0])
         offers_max_count -= 1
     sock.close()
