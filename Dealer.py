@@ -25,7 +25,7 @@ class Dealer:
         return self.card_list.pop()
 
     def get_points(self, card):
-        if card.num == 13 :
+        if card.num == 1 :
             return 11
         elif card.num >= 10 :
             return 10

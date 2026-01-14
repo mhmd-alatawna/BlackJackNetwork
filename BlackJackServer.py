@@ -12,7 +12,6 @@ TCP_PORT = 10001
 MESSAGE_INTERVAL_SEC = 1
 server_name = "greedy dealer"
 
-cookie_dict = {}
 # as we learned in class , each physical connection have its own IP , we need to get the active IP
 # so we send a summy message to check which interface (wifi,bluetooth ...) the OS uses .
 def get_active_ip():
@@ -38,16 +37,9 @@ def broadcast():
 
         time.sleep(MESSAGE_INTERVAL_SEC)
 
-
-broadcast_thread = threading.Thread(target=broadcast, daemon=True)
-broadcast_thread.start()
-
 def handle_client(connection, address):
     data = connection.recv(RequestMessage.get_size())
     message = RequestMessage.extractMessage(data)
-
-    if message.msg_type != RequestMessage.get_type():
-        return
 
     num_of_rounds = message.num_of_rounds
     dealer = Dealer()
@@ -65,17 +57,22 @@ def handle_client(connection, address):
         player_sum += dealer.get_points(client_card1) + dealer.get_points(client_card2)
         dealer_sum += dealer.get_points(dealer_card1)
 
+        # if player busted from start , inform player and end round
+        game_over = False
+        round_status = 0
+        if player_sum > 21:
+            round_status = 2
+            game_over = True
         # sending the first two player's cards and the first dealer's card
         message1 = ServerPayloadMessage(0,client_card1)
-        message2 = ServerPayloadMessage(0,client_card2)
+        message2 = ServerPayloadMessage(round_status,client_card2)
         message3 = ServerPayloadMessage(0,dealer_card1)
         connection.sendall(message1.get_message())
         connection.sendall(message2.get_message())
         connection.sendall(message3.get_message())
 
         # loop until client Stands (player's turn)
-        game_over = False
-        while True :
+        while not game_over :
             data = connection.recv(ClientPayloadMessage.get_size())
             message = ClientPayloadMessage.extractMessage(data)
             response = message.player_decision
@@ -103,7 +100,7 @@ def handle_client(connection, address):
         round_status = 0
         if dealer_sum > 21:
             round_status = 3
-        if dealer_sum > 17:
+        if dealer_sum >= 17:
             if dealer_sum < player_sum:
                 round_status = 3
             elif player_sum < dealer_sum:
@@ -143,6 +140,10 @@ def handle_client(connection, address):
 
     connection.close()
 
+
+# start broadcasting continuously
+broadcast_thread = threading.Thread(target=broadcast, daemon=True)
+broadcast_thread.start()
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(("", TCP_PORT))
